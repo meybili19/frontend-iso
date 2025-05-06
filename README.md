@@ -75,7 +75,7 @@ Luego, levanta el servidor:
 uvicorn main:app --reload
 ```
 
-El backend quedará disponible en:
+El backend quedará disponible en:-
 
 ```
 http://localhost:8000
