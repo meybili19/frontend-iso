@@ -11,7 +11,7 @@ export default function Home() {
   const [comparison, setComparison] = useState('');
 
   const getCase = async () => {
-    const res = await axios.get('http://localhost:8000/case');
+    const res = await axios.get('https://backend-iso-production.up.railway.app/case');
     setCaseStudy(res.data.case_study);
     setManualInput('');
     setIaSolution('');
@@ -19,12 +19,12 @@ export default function Home() {
   };
 
   const getSolution = async () => {
-    const res = await axios.post('http://localhost:8000/solve', { case_study: caseStudy });
+    const res = await axios.post('https://backend-iso-production.up.railway.app/solve', { case_study: caseStudy });
     setIaSolution(res.data.ia_solution);
   };
 
   const compareAnswers = async () => {
-    const res = await axios.post('http://localhost:8000/compare', {
+    const res = await axios.post('https://backend-iso-production.up.railway.app/compare', {
       manual_response: manualInput,
       case_study: caseStudy,
       ia_solution: iaSolution
