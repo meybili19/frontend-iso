@@ -1,6 +1,9 @@
+'use client';
+
 import { useState } from 'react';
 import Head from 'next/head';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 import ReactMarkdown from 'react-markdown';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -9,27 +12,81 @@ export default function Home() {
   const [manualInput, setManualInput] = useState('');
   const [iaSolution, setIaSolution] = useState('');
   const [comparison, setComparison] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const getCase = async () => {
-    const res = await axios.get('https://backend-iso.up.railway.app/case');
-    setCaseStudy(res.data.case_study);
-    setManualInput('');
-    setIaSolution('');
-    setComparison('');
+    setIsLoading(true);
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/case');
+      setCaseStudy(res.data.case_study || res.data.case);
+      setManualInput('');
+      setIaSolution('');
+      setComparison('');
+    } catch (error) {
+      alert('Error al generar el caso');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getSolution = async () => {
-    const res = await axios.post('https://backend-iso.up.railway.app/solve', { case_study: caseStudy });
-    setIaSolution(res.data.ia_solution);
+    setIsLoading(true);
+    try {
+      const res = await axios.post('http://127.0.0.1:8000/solve', { case: caseStudy });
+      setIaSolution(res.data.ia_solution || res.data.solution);
+    } catch (error) {
+      alert('Error al obtener la solución IA');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const compareAnswers = async () => {
-    const res = await axios.post('https://backend-iso.up.railway.app/compare', {
-      manual_response: manualInput,
-      case_study: caseStudy,
-      ia_solution: iaSolution
-    });
-    setComparison(res.data.comparison);
+    setIsLoading(true);
+    try {
+      const res = await axios.post('http://127.0.0.1:8000/compare', {
+        case: caseStudy,
+        user_solution: manualInput,
+        ia_solution: iaSolution
+      });
+      setComparison(res.data.comparison);
+    } catch (error) {
+      alert('Error al comparar las respuestas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    setIsLoading(true);
+    try {
+      const res = await axios.post('http://127.0.0.1:8000/upload_case', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log(res.data);  // Añadir esta línea para inspeccionar la respuesta
+      setCaseStudy(res.data.uploaded_case);  // Verifica si la clave es correcta
+      setManualInput('');
+      setIaSolution('');
+      setComparison('');
+      alert('Caso de estudio cargado con éxito');
+    } catch (error) {
+      alert('Error al cargar el caso');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
+  const downloadCaseAsPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(12);
+    const lines = doc.splitTextToSize(caseStudy, 180);
+    doc.text(lines, 10, 10);
+    doc.save('caso_de_estudio.pdf');
   };
 
   const resetAll = () => {
@@ -46,33 +103,43 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="main-content ">
-        <div className="bg-white shadow rounded p-4 p-md-5 mb-5">
-          <h2 className="text-center text-black fw-bold display-5 mb-4">
-            🛡️ ISO/IEC 29100 - Casos de Estudio
-          </h2>
+      <div className="container mt-5">
+        <h2 className="text-center text-black fw-bold display-5 mb-4">
+          🛡️ ISO/IEC 29100 - Casos de Estudio
+        </h2>
 
-          <div className="text-center mb-4 d-grid gap-2 d-md-flex justify-content-md-center">
-            <button className="btn btn-primary btn-lg" onClick={getCase}>
-              Generar Caso de Estudio
-            </button>
-            <button className="btn btn-outline-danger btn-lg" onClick={resetAll}>
-              Limpiar Todo
-            </button>
-          </div>
+        <div className="text-center mb-4 d-grid gap-2 d-md-flex justify-content-md-center">
+          <button className="btn btn-primary btn-lg" onClick={getCase} disabled={isLoading}>
+            Generar Caso de Estudio
+          </button>
+          <input
+            type="file"
+            accept=".txt,.pdf,.doc,.docx"
+            onChange={handleFileUpload}
+            className="form-control w-auto"
+          />
+          <button className="btn btn-outline-danger btn-lg" onClick={resetAll}>
+            Limpiar Todo
+          </button>
+        </div>
 
-          {caseStudy && (
+        {isLoading && <div className="text-center mb-3">🔄 Cargando...</div>}
+
+        {caseStudy && (
+          <>
             <div className="card border-info mb-4">
-              <div className="card-header bg-info text-white fs-3 fw-bold fw-cursive">
-                Caso Generado
-              </div>
+              <div className="card-header bg-info text-white fs-4">Caso Generado</div>
               <div className="card-body">
                 <ReactMarkdown>{caseStudy}</ReactMarkdown>
               </div>
             </div>
-          )}
 
-          {caseStudy && (
+            <div className="text-center mb-3">
+              <button className="btn btn-outline-primary" onClick={downloadCaseAsPDF}>
+                Descargar Caso en PDF
+              </button>
+            </div>
+
             <div className="row">
               <div className="col-md-6 mb-4">
                 <div className="card h-100">
@@ -106,34 +173,30 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          )}
 
-          {caseStudy && (
             <div className="d-flex justify-content-center gap-3 flex-wrap mb-4">
-              <button className="btn btn-success btn-lg" onClick={getSolution}>
+              <button className="btn btn-success btn-lg" onClick={getSolution} disabled={isLoading}>
                 Obtener Solución IA
               </button>
               <button
                 className="btn btn-secondary btn-lg"
                 onClick={compareAnswers}
-                disabled={!iaSolution}
+                disabled={!iaSolution || isLoading}
               >
                 Comparar Respuestas
               </button>
             </div>
-          )}
 
-          {comparison && (
-            <div className="card border-primary mt-4">
-              <div className="card-header bg-primary text-white fs-5">
-                Resultado de la Comparación
+            {comparison && (
+              <div className="card border-primary mt-4">
+                <div className="card-header bg-primary text-white fs-5">Resultado de la Comparación</div>
+                <div className="card-body">
+                  <ReactMarkdown>{comparison}</ReactMarkdown>
+                </div>
               </div>
-              <div className="card-body">
-                <ReactMarkdown>{comparison}</ReactMarkdown>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
 
       <footer className="footer">
@@ -162,7 +225,7 @@ export default function Home() {
           background-color: #f8f9fa;
           padding: 1rem;
           font-size: 0.9rem;
-          color:rgb(71, 79, 87);
+          color: rgb(71, 79, 87);
           text-align: center;
         }
       `}</style>
