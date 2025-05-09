@@ -20,7 +20,7 @@ export default function Home() {
   const getCase = async () => {
     setIsLoading(true);
     try {
-      const res = await axios.get('backend-iso-production.up.railway.app/case');
+      const res = await axios.get('https://backend-iso-production.up.railway.app/case');
       setCaseStudy(res.data.case_study || res.data.case);
       setManualInput('');
       setIaSolution('');
@@ -35,7 +35,7 @@ export default function Home() {
   const getSolution = async () => {
     setIsLoading(true);
     try {
-      const res = await axios.post('backend-iso-production.up.railway.app/solve', { case: caseStudy });
+      const res = await axios.post('https://backend-iso-production.up.railway.app/solve', { case: caseStudy });
       setIaSolution(res.data.ia_solution || res.data.solution);
     } catch (error) {
       alert('Error al obtener la solución IA');
@@ -52,7 +52,7 @@ export default function Home() {
   
     setIsLoading(true);
     try {
-      const res = await axios.post('backend-iso-production.up.railway.app/compare', {
+      const res = await axios.post('https://backend-iso-production.up.railway.app/compare', {
         case: caseStudy,
         user_solution: manualInput,
         ia_solution: iaSolution
@@ -73,7 +73,7 @@ export default function Home() {
     formData.append('file', file);
     setIsLoading(true);
     try {
-      const res = await axios.post('backend-iso-production.up.railway.app/upload_case', formData, {
+      const res = await axios.post('https://backend-iso-production.up.railway.app/upload_case', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       console.log(res.data);
